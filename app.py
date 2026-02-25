@@ -567,6 +567,16 @@ if problem_type == "Clasificacion":
 
 elif problem_type == "Regresion":
     with model_tab:
+        if "trained" not in st.session_state:
+            st.session_state.trained = False
+            st.session_state.clf = None
+            st.session_state.pred = None
+            st.session_state.metrics = None
+            st.session_state.X_test = None
+            st.session_state.y_test = None
+            st.session_state.X_train = None
+            st.session_state.y_train = None
+            st.session_state.model_signature = None
         # =========================
         # FORM: Configuración + Entrenamiento
         # =========================
@@ -668,6 +678,10 @@ elif problem_type == "Regresion":
                 }
 
             st.success("Entrenamiento finalizado ✅")
+
+        if not st.session_state.trained:
+            st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
+            st.stop()
 
         clf = st.session_state.clf
         pred = st.session_state.pred
@@ -828,4 +842,3 @@ elif problem_type == "Regresion":
                                 top_n=top_n
                             )
                             st.pyplot(fig, clear_figure=True)
-
