@@ -6,8 +6,6 @@ from lime.lime_tabular import LimeTabularExplainer
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.inspection import partial_dependence
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
 
 
 def fig_univar_hist_box(x: pd.Series, col: str, bins="auto"):
@@ -81,12 +79,6 @@ def fig_matrix_corr(n: int, corr_plot, method: str, st):
     return fig
 
 
-# def class_balance_hist(y):
-#     fig, ax = plt.subplots(figsize=(7, 2))
-#     ax.hist(y, bins="auto", edgecolor="black", linewidth=1.0)
-
-#     return fig
-
 def class_balance_hist(y):
     """
     Barplot con el conteo de cada clase (más intuitivo que histograma para categóricas).
@@ -127,12 +119,10 @@ def fig_global_importance_bar(values, feature_names, title="Importancia global",
     """
     Barplot horizontal con las importancias (ordenadas). Muestra top_n.
     """
-    import numpy as np
-
     values = np.asarray(values, dtype=float)
     feature_names = np.asarray(feature_names, dtype=str)
 
-    # ordenar por valor absoluto (muy útil para coeficientes)
+    # ordenar por valor absoluto
     order = np.argsort(np.abs(values))[::-1]
     order = order[: min(top_n, len(order))]
 
@@ -140,7 +130,7 @@ def fig_global_importance_bar(values, feature_names, title="Importancia global",
     names = feature_names[order]
 
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.barh(range(len(vals))[::-1], vals)  # invertido para que el más importante arriba
+    ax.barh(range(len(vals))[::-1], vals)
     ax.set_yticks(range(len(vals))[::-1])
     ax.set_yticklabels(names)
     ax.set_title(title)
@@ -205,7 +195,6 @@ def lime_plot(clf, x_train, x_test, features, instance=None):
     # Graficar las características más importantes de la clase específica
     features, importances = zip(*feature_importance)
     # Crear una figura para el gráfico
-    plt.figure(figsize=(8, 6))
     fig, ax = plt.subplots(figsize=(7, 2.8))
     plt.xticks(rotation=45)
     ax.barh(features, np.array(importances), label=f'Clase {clf.classes_[explanation.top_labels[0]]}')
@@ -218,24 +207,24 @@ def lime_plot(clf, x_train, x_test, features, instance=None):
     return fig
 
 
-def shapley_importance(clf, shap_values, features):
+def shapley_importance(shap_values, classes, features):
     # Crear una figura para la importancia global de las características
     plt.figure(figsize=(8, 6))
     fig, ax = plt.subplots(figsize=(7, 2.8))
 
-    importances = np.zeros((len(features), len(clf.classes_)))
+    importances = np.zeros((len(features), len(classes)))
     acumulado = np.zeros(len(features))
 
     # Iterar sobre cada etiqueta (clase) y calcular la importancia de Shapley
-    for i, class_name in enumerate(clf.classes_):
+    for i, class_name in enumerate(classes):
         print(i)
         print(shap_values)
         # Obtener valores absolutos medios de SHAP para la clase actual
         shap_importance = np.abs(shap_values[:, :, i].values).mean(axis=0)
         importances[:, i] = shap_importance
 
-    for i in range(len(clf.classes_)):
-        ax.barh(features, importances[:, i], left=acumulado, label=f'Clase {clf.classes_[i]}')
+    for i in range(len(classes)):
+        ax.barh(features, importances[:, i], left=acumulado, label=f'Clase {classes[i]}')
         acumulado += importances[:, i]  # Acumular para la siguiente clase
 
     plt.ylabel('Índice de la Característica')
@@ -272,5 +261,129 @@ def shapley_dependence(clf, shap_values, features, feature_name, class_name, X_t
                          show=False,
                          ax=ax)
     plt.title(f"Shapley dependence for class {class_name}, feature {feature_name}")
+
+    return fig
+
+
+def distribution_hist(y):
+    """
+    Histograma de distribución con Matplotlib para variables continuas.
+    Mantiene el nombre para compatibilidad con la estructura heredada.
+    """
+    fig, ax = plt.subplots(figsize=(7, 2.8))
+
+    ax.hist(y, bins="auto", edgecolor="black", linewidth=1.0, alpha=0.7)
+
+    mean_val = np.mean(y)
+    median_val = np.median(y)
+
+    ax.axvline(mean_val, color='red', linestyle='--', label=f'Media: {mean_val:.2f}')
+    ax.axvline(median_val, color='green', linestyle='-', label=f'Mediana: {median_val:.2f}')
+
+    ax.set_title("Distribución de la variable Target (Regresión)")
+    ax.set_xlabel("Valor del Target")
+    ax.set_ylabel("Frecuencia")
+    ax.legend(fontsize=8)
+
+    plt.tight_layout()
+    return fig
+
+
+def fig_regression_results(y_true, y_pred):
+    """
+    Gráfico de dispersión para comparar valores reales vs predichos.
+    """
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    # Scatter plot de los datos
+    ax.scatter(y_true, y_pred, alpha=0.5, color='blue', edgecolors='k', label='Predicciones')
+
+    # Línea de referencia (predicción perfecta)
+    lims = [
+        np.min([ax.get_xlim(), ax.get_ylim()]),
+        np.max([ax.get_xlim(), ax.get_ylim()]),
+    ]
+    ax.plot(lims, lims, 'r--', alpha=0.75, zorder=3, label='Predicción Perfecta')
+
+    ax.set_aspect('equal')
+    ax.set_xlim(lims)
+    ax.set_ylim(lims)
+
+    ax.set_xlabel('Valores Reales')
+    ax.set_ylabel('Predicciones')
+    ax.set_title('Evaluación de Regresión: Real vs Predicho')
+    ax.legend()
+    ax.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    return fig
+
+
+def lime_plot_reg(model, X_train, X_test, features, instance=None):
+    fig, ax = plt.subplots(figsize=(7, 2.8))
+    explainer = LimeTabularExplainer(X_train.values, mode="regression", feature_names=features,
+                                     discretize_continuous=False,
+                                     random_state=42)
+
+    # Explicar la predicción de la clase en una muestra de X_test
+    # Elegimos una instancia aleatoria del conjunto de test
+    if instance is None:
+        instance = np.random.randint(0, X_test.shape[0])
+    sample = np.array(X_test)[instance]
+
+    # Explicación de LIME para la
+    explanation = explainer.explain_instance(sample, model.predict, num_features=len(features))
+
+    # Extraer las explicaciones de las características ordenadas de mayor a menor
+    feature_importance = explanation.as_list()[::-1]
+
+    # Graficar las características más importantes de la clase específica
+    features, importances = zip(*feature_importance)
+    ax.barh(features, np.array(importances))
+
+    # Personalizar gráfico
+    ax.set_ylabel('Características')
+    ax.set_xlabel('Valor LIME')
+    ax.set_title(f"Explicaciones LIME instancia {instance}")
+    plt.xticks(rotation=45)
+
+    return fig
+
+
+def pdp_plot_reg(model, X_train, features):
+    results = partial_dependence(model, X_train, features=features)
+
+    feature_values = results['values'][0]
+    pdp_values = results['average'][0]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(feature_values, pdp_values, label=f"PDP - {features}")
+    plt.xlabel(f"{features}")
+    plt.title("Gráfico de Dependencia Parcial (Regresión)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    return fig
+
+
+def shapley_importance_reg(shap_values, features):
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    shap_importance = np.abs(shap_values.values).mean(axis=0)
+    ax.barh(features, shap_importance)
+
+    # 🔹 Personalizar gráfico
+    plt.ylabel('Índice de la Característica')
+    plt.xlabel('Importancia SHAP Media')
+    plt.title('Importancia SHAP por Característica y Clase')
+
+    return fig
+
+
+def shapley_summary_reg(shap_values, features, X_test):
+    fig = plt.figure()
+    shap.summary_plot(shap_values, X_test, feature_names=[f'Feature {feat}' for feat in features])
+    plt.title("Shapley summary")
 
     return fig

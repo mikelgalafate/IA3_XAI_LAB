@@ -13,9 +13,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
-    recall_score,
-    mean_absolute_error,
-    mean_squared_error
+    recall_score
 )
 from sklearn.preprocessing import LabelEncoder
 from sklearn.inspection import permutation_importance
@@ -305,7 +303,7 @@ def get_model_coefficients_importance(clf, feature_names):
     return coef_imp, list(feature_names)
 
 
-def get_permutation_importance(clf, X_test, y_test, feature_names, n_repeats=10, random_state=42):
+def get_permutation_importance(clf, X_test, y_test, feature_names, scoring, n_repeats=10, random_state=42):
     """
     Permutation importance (model-agnostic).
     Devuelve (values, feature_names) con importances_mean.
@@ -314,7 +312,7 @@ def get_permutation_importance(clf, X_test, y_test, feature_names, n_repeats=10,
         clf, X_test, y_test,
         n_repeats=n_repeats,
         random_state=random_state,
-        scoring="accuracy"
+        scoring=scoring
     )
     return r.importances_mean, list(feature_names)
 

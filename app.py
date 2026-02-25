@@ -1,19 +1,6 @@
 ## Comando para ejecutar:
 # python -m pip install -r requirements.txt
 # python -m streamlit run app.py
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    mean_absolute_error,
-    mean_squared_error
-)
-from sklearn.preprocessing import LabelEncoder
-import numpy as np
-from src.plots import fig_confusion_matrix
 from src.io import *
 from src.plots import *
 from src.classification import *
@@ -460,7 +447,7 @@ if problem_type == "Clasificacion":
                     st.session_state.shap_values = shapley_values(clf, X_train, X_test)
             if st.session_state.shap_values is not None:
                 st.subheader("Shapley Importance")
-                fig = shapley_importance(clf, st.session_state.shap_values, features=features)
+                fig = shapley_importance(st.session_state.shap_values, classes=classes, features=features)
                 st.pyplot(fig, clear_figure=True)
 
                 st.subheader("Shapley Summary")
@@ -556,10 +543,8 @@ if problem_type == "Clasificacion":
                         value=10,
                         key="xai_perm_repeats"
                     )
-                    values, names = get_permutation_importance(
-                        clf, X_test_num, y_test, feature_names,
-                        n_repeats=n_rep, random_state=42
-                    )
+                    values, names = get_permutation_importance(clf, X_test_num, y_test, feature_names, "accuracy",
+                                                               n_repeats=n_rep, random_state=42)
                     fig = fig_global_importance_bar(
                         values, names,
                         title="Importancia por permutación (mean)",
@@ -580,7 +565,267 @@ if problem_type == "Clasificacion":
                         )
                         st.pyplot(fig, clear_figure=True)
 
-else:
+elif problem_type == "Regresion":
     with model_tab:
-        st.write("To do")
+        # =========================
+        # FORM: Configuración + Entrenamiento
+        # =========================
+        st.markdown("**Variable de etiquetas**")
+
+        df_sample = df.copy()
+
+        target_select, target_histogram = st.columns([1, 2])
+
+        with target_select:
+            target_column = st.selectbox(
+                "Target column",
+                options=df_sample.columns,
+                index=len(df_sample.columns) - 1,
+                key="target_select"
+            )
+
+        X = df_sample.loc[:, df_sample.columns != target_column]
+        y = df_sample[target_column]
+        features = X.columns
+
+        # Mostrar balance de clases (barplot)
+        with target_histogram:
+            fig = distribution_hist(y)
+            st.pyplot(fig, clear_figure=True)
+
+        # Partición train-test
+        st.markdown("**Partición Train-Test**")
+        train_data_col, test_data_col, test_size_select = st.columns(3)
+
+        with test_size_select:
+            test_size = st.number_input(
+                label="Test size",
+                min_value=0.01,
+                max_value=0.99,
+                value=0.2,
+                format="%.2f",
+                key="size_select_reg",
+                on_change=lambda: setattr(st.session_state,
+                                          "trained",
+                                          False)
+            )
+
+        # Realizamos la partición
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=float(test_size), random_state=42)
+
+        with train_data_col:
+            st.metric("**Datos para entrenamiento**", f"{X_train.shape[0]:,}".replace(",", "."))
+            st.caption(f"Rango Target: [{y_train.min():.2f}, {y_train.max():.2f}]")
+
+        with test_data_col:
+            st.metric("**Datos para test**", f"{X_test.shape[0]:,}".replace(",", "."))
+            st.caption(f"Media Target: {y_test.mean():.2f}")
+
+        # Validaciones para Regresión
+        if len(y_train) < 5:
+            st.error("⚠️ No hay datos suficientes para entrenar un modelo de regresión.")
+            st.stop()
+
+        # Verificación de nulos (Crucial en regresión)
+        if y.isnull().any():
+            st.warning("⚠️ El target contiene valores nulos. Scikit-learn fallará al entrenar.")
+
+        # Selección del tipo de modelo
+        model_type = st.selectbox("Modelo", get_model_list_reg(), index=0, key="model_reg",
+                                  on_change=lambda: setattr(st.session_state,
+                                                            "trained",
+                                                            False))
+        # Parametrización del modelo (UI dinámica)
+        params = render_hyperparams_ui_reg(model_type, key_prefix="hp_reg")
+
+        # =========================
+        # Entrenamiento (solo cuando se pulsa el submit)
+        # =========================
+        if st.button("🚀 Entrenar modelo", type="primary"):
+            with st.spinner("Entrenando modelo..."):
+                clf = create_regressor(model_name=model_type, params=params)
+                clf.fit(X_train, y_train)
+                pred = clf.predict(X_test)
+
+                metrics = compute_regression_metrics(y_test, pred)
+
+                # Guardar en sesión para que NO se pierda al tocar XAI
+                st.session_state.trained = True
+                st.session_state.clf = clf
+                st.session_state.pred = pred
+                st.session_state.metrics = metrics
+                st.session_state.X_train = X_train
+                st.session_state.y_train = y_train
+                st.session_state.X_test = X_test
+                st.session_state.y_test = y_test
+
+                # Firma de configuración (útil para debug)
+                st.session_state.model_signature = {
+                    "model_type": model_type,
+                    "params": params,
+                    "test_size": float(test_size),
+                    "target": target_column,
+                }
+
+            st.success("Entrenamiento finalizado ✅")
+
+        clf = st.session_state.clf
+        pred = st.session_state.pred
+        metrics = st.session_state.metrics
+        X_train = st.session_state.X_train
+        y_train = st.session_state.y_train
+        X_test = st.session_state.X_test
+        y_test = st.session_state.y_test
+
+        # =========================
+        # Resultados: Precisión del modelo
+        # =========================
+        if st.session_state.trained:
+            with st.expander("PRECISIÓN DEL MODELO", expanded=False):
+                # --- FILA 2: métricas + gráfico de dispersión ---
+                left, right = st.columns([1, 2])
+
+                with left:
+                    st.markdown("### Métricas")
+                    # Mostramos las métricas calculadas por compute_regression_metrics
+                    st.metric("R² (Bondad de ajuste)", f"{metrics['r2']:.4f}")
+                    st.metric("MAE (Error medio)", f"{metrics['mae']:.4f}")
+                    st.metric("RMSE", f"{metrics['rmse']:.4f}")
+                    st.metric("MAPE (Error %)", f"{metrics['mape']:.2f}%")
+
+                with right:
+                    # El equivalente a la matriz de confusión: Gráfico Real vs Predicho
+                    fig_reg = fig_regression_results(y_test, pred)
+                    st.pyplot(fig_reg, clear_figure=True)
+
+            with st.expander("EXPLICABILIDAD LOCAL", expanded=False):
+                st.subheader("LIME")
+                checker, selector = st.columns([1, 6])
+                with checker:
+                    st.write(".")
+                    random = st.toggle("Instancia random", value=True,
+                                       on_change=lambda: setattr(st.session_state,
+                                                                 "instance_select",
+                                                                 None if not random else 0))
+                with selector:
+                    instance = st.number_input(label="Instance",
+                                               min_value=0,
+                                               max_value=len(X_test) - 1,
+                                               key="instance_select",
+                                               disabled=random)
+                fig = lime_plot_reg(clf, X_train, X_test, features=features, instance=instance)
+                st.pyplot(fig, clear_figure=True)
+                plt.close("all")
+
+            with st.expander("EXPLICABILIDAD GLOBAL", expanded=False):
+                st.subheader("Partial Dependence Plot")
+                # Seleccionar la característica para la que calcular PDP
+                feature_idx = st.segmented_control("Variable para PDP",
+                                                   features,
+                                                   selection_mode="single",
+                                                   default=None)
+
+                if feature_idx is not None:
+                    fig = pdp_plot_reg(clf, X_train, feature_idx)
+                    st.pyplot(fig, clear_figure=True)
+
+                st.subheader("SHAP values")
+                if not hasattr(st.session_state, "shap_values"):
+                    st.session_state.shap_values = None
+                if st.session_state.shap_values is None:
+                    st.info("El cálculo de los valores SHAP puede llevar mucho rato si el conjunto es muy grande.")
+
+                if st.button(
+                        "Calcular valores SHAP" if st.session_state.shap_values is None else "Recalcular valores SHAP"):
+                    with st.spinner("Calculando valores SHAP. Si el conjunto es muy grande, podría llevar un rato..."):
+                        st.session_state.shap_values = shapley_values_reg(clf, X_train, X_test)
+                if st.session_state.shap_values is not None:
+                    st.subheader("Shapley Importance")
+                    fig = shapley_importance_reg(st.session_state.shap_values, features=features)
+                    st.pyplot(fig, clear_figure=True)
+
+                    st.subheader("Shapley Summary")
+                    fig = shapley_summary_reg(st.session_state.shap_values, features, X_test)
+                    st.pyplot(fig, clear_figure=True)
+
+            with st.expander("IMPORTANCIA DE VARIABLES", expanded=False):
+                st.markdown("Selecciona qué explicación global quieres ver:")
+
+                # OJO: muchos modelos de sklearn requieren X numérico
+                X_train_num = X_train.select_dtypes(include=["number"])
+                X_test_num = X_test.select_dtypes(include=["number"])
+
+                if X_train_num.shape[1] == 0:
+                    st.warning("No hay variables numéricas en X. La explicabilidad global requiere features numéricas.")
+                else:
+                    if X_train_num.shape[1] != X_train.shape[1]:
+                        st.info(
+                            "Se usará solo la parte numérica de X para la explicabilidad global (hay columnas no numéricas).")
+
+                    feature_names = X_train_num.columns.tolist()
+                    n_features = len(feature_names)
+
+                    opt = st.radio(
+                        "Método",
+                        ["Importancia del modelo", "Importancia por permutación", "Coeficientes del modelo"],
+                        horizontal=True,
+                        key="xai_global_method"
+                    )
+
+                    # Slider Top N robusto
+                    if n_features == 1:
+                        top_n = 1
+                        st.info("Solo hay 1 variable numérica disponible; se mostrará esa variable.")
+                    else:
+                        top_n = st.slider(
+                            "Top N variables",
+                            min_value=1,
+                            max_value=min(50, n_features),
+                            value=min(20, n_features),
+                            key="xai_top_n"
+                        )
+
+                    if opt == "Importancia del modelo":
+                        out = get_model_feature_importance(clf, feature_names)
+                        if out is None:
+                            st.warning(
+                                "Este modelo no expone `feature_importances_` (solo disponible en árboles/ensembles).")
+                        else:
+                            values, names = out
+                            fig = fig_global_importance_bar(
+                                values, names,
+                                title="Importancia del modelo (feature_importances_)",
+                                top_n=top_n
+                            )
+                            st.pyplot(fig, clear_figure=True)
+
+                    elif opt == "Importancia por permutación":
+                        n_rep = st.slider(
+                            "n_repeats (permutación)",
+                            min_value=3,
+                            max_value=30,
+                            value=10,
+                            key="xai_perm_repeats"
+                        )
+                        values, names = get_permutation_importance(clf, X_test_num, y_test, feature_names, "r2",
+                                                                   n_repeats=n_rep, random_state=42)
+                        fig = fig_global_importance_bar(
+                            values, names,
+                            title="Importancia por permutación (mean)",
+                            top_n=top_n
+                        )
+                        st.pyplot(fig, clear_figure=True)
+
+                    else:  # Coeficientes
+                        out = get_model_coefficients_importance(clf, feature_names)
+                        if out is None:
+                            st.warning("Este modelo no expone `coef_` (típico de modelos lineales).")
+                        else:
+                            values, names = out
+                            fig = fig_global_importance_bar(
+                                values, names,
+                                title="Coeficientes (media |coef|)",
+                                top_n=top_n
+                            )
+                            st.pyplot(fig, clear_figure=True)
 
