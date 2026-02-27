@@ -35,7 +35,6 @@ def stop():
 file_path = os.path.dirname(os.path.abspath(__file__))
 icon_path = os.path.join(file_path, "img", "icon.jpeg")
 
-#st.sidebar.markdown("IA3 XAI LAB")
 st.set_page_config(page_title="IA3 XAI LAB", page_icon=f"{file_path}/img/icon.jpeg", layout="wide")
 
 col1, col2 = st.columns([1, 8], vertical_alignment="center")
