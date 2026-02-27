@@ -9,34 +9,15 @@ import os
 
 
 def footer():
+    st.markdown("---")
     st.markdown(
         """
-        <style>
-        /* 1. Forzamos al contenedor base a ser un Flexbox que ocupe toda la pantalla */
-        #root > div:nth-child(1) > div > div > div > div > section > div {
-            display: flex;
-            flex-direction: column;
-            min-height: 85vh; /* Altura suficiente para cubrir el monitor */
-        }
-
-        /* 2. Creamos el estirador automático */
-        .st-emotion-cache-1y4p8pa { /* Este es el contenedor de bloques de Streamlit */
-            flex: 1;
-        }
-
-        /* 3. El footer como un elemento simple al final */
-        .custom-footer {
-            margin-top: auto; /* ¡Esta es la clave! Empuja hacia arriba todo lo que puede */
-            padding: 30px 0;
-            border-top: 1px solid #ddd;
-            text-align: center;
-            color: #888;
-            width: 100%;
-        }
-        </style>
-
-        <div class="custom-footer">
-            Footer
+        <div style="
+            text-align:center;
+            padding: 12px 0 24px 0;
+            color: #666;
+            font-size: 0.9rem;">
+            © 2026 · IA3 XAI LAB · Hecho con Streamlit
         </div>
         """,
         unsafe_allow_html=True
@@ -51,14 +32,18 @@ def stop():
 #################################################################
 ################# CARGA DE DATOS ################################
 #################################################################
-st.set_page_config(page_title="IA3_XAI_LAB", page_icon="📈", layout="wide")
-
-st.title("IA3 XAI LAB")
-
-file_path = current_dir = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.dirname(os.path.abspath(__file__))
 icon_path = os.path.join(file_path, "img", "icon.jpeg")
-st.logo(icon_path)
-st.sidebar.markdown("IA3 XAI LAB")
+
+#st.sidebar.markdown("IA3 XAI LAB")
+st.set_page_config(page_title="IA3 XAI LAB", page_icon=f"{file_path}/img/icon.jpeg", layout="wide")
+
+col1, col2 = st.columns([1, 8], vertical_alignment="center")
+with col1:
+    st.image(f"{file_path}/img/icon.jpeg", width=70)
+with col2:
+    st.title("IA3 XAI LAB")
+
 
 st.write("Sube un archivo **CSV** o **Excel** para empezar.")
 
