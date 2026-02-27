@@ -160,7 +160,12 @@ def fig_pdp_ice(estimator, X, features, kind="average", target=None):
 
 def pdp_plot(clf, x, feature_idx, classes, multiclass):
     results = partial_dependence(clf, x, features=[feature_idx])
-    feature_values = results['values'][0]
+    if hasattr(results, "values"):
+        feature_values = results['values'][0]
+    elif hasattr(results, "grid_values"):
+        feature_values = results["grid_values"][0]
+    else:
+        raise Exception
     pdp_values = results['average']
 
     fig, ax = plt.subplots(figsize=(7, 2.8))
@@ -341,7 +346,6 @@ def lime_plot_reg(model, X_train, X_test, features, instance=None):
     features, importances = zip(*feature_importance)
     ax.barh(features, np.array(importances))
 
-    # Personalizar gráfico
     ax.set_ylabel('Características')
     ax.set_xlabel('Valor LIME')
     ax.set_title(f"Explicaciones LIME instancia {instance}")
@@ -352,14 +356,18 @@ def lime_plot_reg(model, X_train, X_test, features, instance=None):
 
 def pdp_plot_reg(model, X_train, features):
     results = partial_dependence(model, X_train, features=features)
-
-    feature_values = results['values'][0]
+    if hasattr(results, "values"):
+        feature_values = results['values'][0]
+    elif hasattr(results, "grid_values"):
+        feature_values = results["grid_values"][0]
+    else:
+        raise Exception
     pdp_values = results['average'][0]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(feature_values, pdp_values, label=f"PDP - {features}")
     plt.xlabel(f"{features}")
-    plt.title("Gráfico de Dependencia Parcial (Regresión)")
+    plt.title("Parcial Dependence Plot")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
@@ -373,7 +381,6 @@ def shapley_importance_reg(shap_values, features):
     shap_importance = np.abs(shap_values.values).mean(axis=0)
     ax.barh(features, shap_importance)
 
-    # 🔹 Personalizar gráfico
     plt.ylabel('Índice de la Característica')
     plt.xlabel('Importancia SHAP Media')
     plt.title('Importancia SHAP por Característica y Clase')

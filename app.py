@@ -5,13 +5,60 @@ from src.io import *
 from src.plots import *
 from src.classification import *
 from src.regression import *
+import os
+
+
+def footer():
+    st.markdown(
+        """
+        <style>
+        /* 1. Forzamos al contenedor base a ser un Flexbox que ocupe toda la pantalla */
+        #root > div:nth-child(1) > div > div > div > div > section > div {
+            display: flex;
+            flex-direction: column;
+            min-height: 85vh; /* Altura suficiente para cubrir el monitor */
+        }
+
+        /* 2. Creamos el estirador automático */
+        .st-emotion-cache-1y4p8pa { /* Este es el contenedor de bloques de Streamlit */
+            flex: 1;
+        }
+
+        /* 3. El footer como un elemento simple al final */
+        .custom-footer {
+            margin-top: auto; /* ¡Esta es la clave! Empuja hacia arriba todo lo que puede */
+            padding: 30px 0;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #888;
+            width: 100%;
+        }
+        </style>
+
+        <div class="custom-footer">
+            Footer
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def stop():
+    footer()
+    st.stop()
 
 
 #################################################################
 ################# CARGA DE DATOS ################################
 #################################################################
 st.set_page_config(page_title="IA3_XAI_LAB", page_icon="📈", layout="wide")
-st.title("📈 IA3 XAI LAB")
+
+st.title("IA3 XAI LAB")
+
+file_path = current_dir = os.path.dirname(os.path.abspath(__file__))
+icon_path = os.path.join(file_path, "img", "icon.jpeg")
+st.logo(icon_path)
+st.sidebar.markdown("IA3 XAI LAB")
 
 st.write("Sube un archivo **CSV** o **Excel** para empezar.")
 
@@ -20,7 +67,7 @@ uploaded = st.file_uploader("📁 Subir archivo", type=["csv", "xlsx", "xls"],
 
 if uploaded is None:
     st.info("Sube un archivo para continuar.")
-    st.stop()
+    stop()
 
 file_type = detect_file_type(uploaded.name)
 
@@ -40,7 +87,7 @@ elif file_type == "excel":
     sep = decimal = encoding = None
 else:
     st.error("Formato no soportado. Usa CSV o Excel.")
-    st.stop()
+    stop()
 
 # Cargar datos
 try:
@@ -51,11 +98,11 @@ try:
 except Exception as e:
     st.error("No se pudo leer el archivo. Revisa las opciones.")
     st.exception(e)
-    st.stop()
+    stop()
 
 if df.empty:
     st.warning("El archivo se cargó pero está vacío.")
-    st.stop()
+    stop()
 
 problem_type = st.radio("Selecciona el tipo de problema",
                         ["Clasificacion", "Regresion"],
@@ -65,7 +112,7 @@ problem_type = st.radio("Selecciona el tipo de problema",
 
 while problem_type is None:
     st.info("Selecciona el tipo de problema para continuar")
-    st.stop()
+    stop()
 else:
     datos, model_tab = st.tabs(["Datos", problem_type])
 
@@ -285,7 +332,7 @@ if problem_type == "Clasificacion":
         if is_multiclass(y_train) is None:
             st.error("No hay datos suficientes de cada clase para entrenar")
             train_clicked = st.form_submit_button("🚀 Entrenar modelo", type="primary", disabled=True)
-            st.stop()
+            stop()
 
         if len(pd.Series(y_train).unique()) != len(pd.Series(y).unique()):
             st.warning(
@@ -299,7 +346,7 @@ if problem_type == "Clasificacion":
         if multiclass is None:
             st.error("No hay suficientes clases")
             train_clicked = st.form_submit_button("🚀 Entrenar modelo", type="primary", disabled=True)
-            st.stop()
+            stop()
 
         elif multiclass:
             model_type_select, estimator_select = st.columns([2, 1])
@@ -362,7 +409,7 @@ if problem_type == "Clasificacion":
         # =========================
         if not st.session_state.trained:
             st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
-            st.stop()
+            stop()
 
         # Recuperar del estado (IMPORTANTE: aquí ya NO se vuelve a entrenar)
         clf = st.session_state.clf
@@ -433,7 +480,11 @@ if problem_type == "Clasificacion":
                 classes = [0]
 
             if feature_idx is not None and classes is not None:
-                fig = pdp_plot(clf, X_train, feature_idx, classes, multiclass)
+                try:
+                    fig = pdp_plot(clf, X_train, feature_idx, classes, multiclass)
+                except Exception as e:
+                    st.exception(e)
+
                 st.pyplot(fig, clear_figure=True)
 
             st.subheader("SHAP values")
@@ -634,7 +685,7 @@ elif problem_type == "Regresion":
         # Validaciones para Regresión
         if len(y_train) < 5:
             st.error("⚠️ No hay datos suficientes para entrenar un modelo de regresión.")
-            st.stop()
+            stop()
 
         # Verificación de nulos (Crucial en regresión)
         if y.isnull().any():
@@ -681,7 +732,7 @@ elif problem_type == "Regresion":
 
         if not st.session_state.trained:
             st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
-            st.stop()
+            stop()
 
         clf = st.session_state.clf
         pred = st.session_state.pred
@@ -740,7 +791,11 @@ elif problem_type == "Regresion":
                                                    default=None)
 
                 if feature_idx is not None:
-                    fig = pdp_plot_reg(clf, X_train, feature_idx)
+                    try:
+                        fig = pdp_plot_reg(clf, X_train, feature_idx)
+                    except Exception as e:
+                        st.exception(e)
+                        stop()
                     st.pyplot(fig, clear_figure=True)
 
                 st.subheader("SHAP values")
@@ -842,3 +897,5 @@ elif problem_type == "Regresion":
                                 top_n=top_n
                             )
                             st.pyplot(fig, clear_figure=True)
+
+footer()
