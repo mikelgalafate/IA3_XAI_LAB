@@ -8,7 +8,171 @@ from src.regression import *
 import os
 
 
-def footer():
+# def footer():
+#     st.markdown("---")
+#     st.markdown(
+#         """
+#
+#         <div style="
+#             text-align:center;
+#             padding: 12px 0 24px 0;
+#             color: #666;
+#             font-size: 0.9rem;">
+#             © 2026 · IA3 XAI LAB · Hecho con Streamlit
+#         </div>
+#         """,
+#         unsafe_allow_html=True
+#     )
+
+def footer(file_path):
+    st.markdown(
+        """
+        <style>
+        /* Contenedor principal del footer */
+        .main-footer {
+            background-color: #d1d5db; /* Gris de la imagen */
+            padding: 40px 5% 20px 5%;
+            font-family: 'Source Sans Pro', sans-serif;
+            color: #1f2937;
+            margin-top: 50px;
+            border-radius: 10px;
+        }
+
+        /* Parte superior: Branding y Enlaces */
+        .footer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .brand-logo {
+            width: 70px;
+            height: auto;
+            margin-right: 15px;
+        }
+
+        .brand-text p {
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .brand-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #111827;
+        }
+
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: #4b5563;
+            margin-top: 4px !important;
+        }
+
+        /* Columnas de navegación */
+        .footer-links {
+            display: flex;
+            gap: 40px;
+            flex: 2;
+            justify-content: flex-end;
+            min-width: 300px;
+        }
+
+        .footer-col h4 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            color: #111827;
+        }
+
+        .footer-col a {
+            display: block;
+            color: #374151;
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .footer-col a:hover {
+            color: #ff4b4b; /* Color primario de Streamlit */
+        }
+
+        /* Divisores y Logos institucionales */
+        .footer-hr {
+            border: 0;
+            border-top: 1px solid #9ca3af;
+            margin: 25px 0;
+        }
+
+        .logos-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .logos-container img {
+            max-height: 50px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* Texto legal inferior */
+        .footer-legal {
+            font-size: 0.65rem;
+            color: #6b7280;
+            text-align: justify;
+            margin-top: 20px;
+            line-height: 1.4;
+        }
+        </style>
+
+        <div class="main-footer">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <div class="brand-text">
+                        <p class="brand-title">IA3migdem</p>
+                        <p class="brand-subtitle">Línea de trabajo en Mantenimiento Inteligente, Gemelo Digital y Explicabilidad de Modelos</p>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Acerca de</h4>
+                        <a href="#">Equipo</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Privacidad</h4>
+                        <a href="#">Política de privacidad</a>
+                        <a href="#">Términos y condiciones</a>
+                        <a href="#">Contacta con nosotros</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Social</h4>
+                        <a href="http://ia3migdem.uah.es/#">LinkedIn</a>
+                        <a href="http://ia3migdem.uah.es/#">Instagram</a>
+                        <a href="https://x.com/ia3migdem">Twitter/X</a>
+                    </div>  
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    imagenes = st.columns(5)
+    path = os.path.join(file_path, "img", "footer")
+    for img_col, img_path in zip(imagenes, os.listdir(path)):
+        img_col.image(os.path.join(path, img_path))
+
     st.markdown("---")
     st.markdown(
         """
@@ -24,8 +188,8 @@ def footer():
     )
 
 
-def stop():
-    footer()
+def stop(file_path):
+    footer(file_path)
     st.stop()
 
 
@@ -51,7 +215,7 @@ uploaded = st.file_uploader("📁 Subir archivo", type=["csv", "xlsx", "xls"],
 
 if uploaded is None:
     st.info("Sube un archivo para continuar.")
-    stop()
+    stop(file_path)
 
 file_type = detect_file_type(uploaded.name)
 
@@ -71,7 +235,7 @@ elif file_type == "excel":
     sep = decimal = encoding = None
 else:
     st.error("Formato no soportado. Usa CSV o Excel.")
-    stop()
+    stop(file_path)
 
 # Cargar datos
 try:
@@ -82,11 +246,11 @@ try:
 except Exception as e:
     st.error("No se pudo leer el archivo. Revisa las opciones.")
     st.exception(e)
-    stop()
+    stop(file_path)
 
 if df.empty:
     st.warning("El archivo se cargó pero está vacío.")
-    stop()
+    stop(file_path)
 
 problem_type = st.radio("Selecciona el tipo de problema",
                         ["Clasificacion", "Regresion"],
@@ -96,7 +260,7 @@ problem_type = st.radio("Selecciona el tipo de problema",
 
 while problem_type is None:
     st.info("Selecciona el tipo de problema para continuar")
-    stop()
+    stop(file_path)
 else:
     datos, model_tab = st.tabs(["Datos", problem_type])
 
@@ -316,7 +480,7 @@ if problem_type == "Clasificacion":
         if is_multiclass(y_train) is None:
             st.error("No hay datos suficientes de cada clase para entrenar")
             train_clicked = st.form_submit_button("🚀 Entrenar modelo", type="primary", disabled=True)
-            stop()
+            stop(file_path)
 
         if len(pd.Series(y_train).unique()) != len(pd.Series(y).unique()):
             st.warning(
@@ -330,7 +494,7 @@ if problem_type == "Clasificacion":
         if multiclass is None:
             st.error("No hay suficientes clases")
             train_clicked = st.form_submit_button("🚀 Entrenar modelo", type="primary", disabled=True)
-            stop()
+            stop(file_path)
 
         elif multiclass:
             model_type_select, estimator_select = st.columns([2, 1])
@@ -393,7 +557,7 @@ if problem_type == "Clasificacion":
         # =========================
         if not st.session_state.trained:
             st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
-            stop()
+            stop(file_path)
 
         # Recuperar del estado (IMPORTANTE: aquí ya NO se vuelve a entrenar)
         clf = st.session_state.clf
@@ -669,7 +833,7 @@ elif problem_type == "Regresion":
         # Validaciones para Regresión
         if len(y_train) < 5:
             st.error("⚠️ No hay datos suficientes para entrenar un modelo de regresión.")
-            stop()
+            stop(file_path)
 
         # Verificación de nulos (Crucial en regresión)
         if y.isnull().any():
@@ -716,7 +880,7 @@ elif problem_type == "Regresion":
 
         if not st.session_state.trained:
             st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
-            stop()
+            stop(file_path)
 
         clf = st.session_state.clf
         pred = st.session_state.pred
@@ -779,7 +943,7 @@ elif problem_type == "Regresion":
                         fig = pdp_plot_reg(clf, X_train, feature_idx)
                     except Exception as e:
                         st.exception(e)
-                        stop()
+                        stop(file_path)
                     st.pyplot(fig, clear_figure=True)
 
                 st.subheader("SHAP values")
@@ -882,4 +1046,4 @@ elif problem_type == "Regresion":
                             )
                             st.pyplot(fig, clear_figure=True)
 
-footer()
+footer(file_path)
