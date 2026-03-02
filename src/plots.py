@@ -89,6 +89,8 @@ def class_balance_hist(y):
     fig, ax = plt.subplots(figsize=(7, 2.8))
     ax.bar(counts.index.astype(str), counts.values, edgecolor="black", linewidth=1.0)
 
+    y_max = counts.values.max()
+    ax.set_ylim(0, y_max * 1.15)
     ax.set_title("Conteo por clase")
     ax.set_xlabel("Clase")
     ax.set_ylabel("Frecuencia")
@@ -98,6 +100,7 @@ def class_balance_hist(y):
         ax.text(i, v, str(int(v)), ha="center", va="bottom", fontsize=9)
 
     plt.tight_layout()
+
     return fig
 
 

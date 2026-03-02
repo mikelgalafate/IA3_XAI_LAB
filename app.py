@@ -257,6 +257,8 @@ with datos:
         with col_center:
             st.pyplot(fig, clear_figure=True)
 
+    footer(file_path)
+
 if problem_type == "Clasificacion":
     with model_tab:
         # =========================
