@@ -173,7 +173,7 @@ def pdp_plot(clf, x, feature_idx, classes, multiclass):
 
     fig, ax = plt.subplots(figsize=(7, 2.8))
     for i, line in enumerate(pdp_values[classes]):
-        label = f"Clase {clf.classes_[classes[i]]}" if multiclass else "Clase positiva"
+        label = f"Clase {clf.classes_[classes[i]]}" if multiclass else clf.classes_[1]
         ax.plot(feature_values, line, label=label)
     fig.legend(loc='center left', bbox_to_anchor=(1, .75))
 
@@ -225,8 +225,6 @@ def shapley_importance(shap_values, classes, features):
 
     # Iterar sobre cada etiqueta (clase) y calcular la importancia de Shapley
     for i, class_name in enumerate(classes):
-        print(i)
-        print(shap_values)
         # Obtener valores absolutos medios de SHAP para la clase actual
         shap_importance = np.abs(shap_values[:, :, i].values).mean(axis=0)
         importances[:, i] = shap_importance
