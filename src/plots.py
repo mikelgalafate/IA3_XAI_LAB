@@ -75,7 +75,7 @@ def fig_matrix_corr(n: int, corr_plot, method: str, st):
 
     ax.set_title(f"Matriz de correlación ({method})")
     plt.tight_layout()
-    
+
     return fig
 
 
@@ -173,7 +173,7 @@ def pdp_plot(clf, x, feature_idx, classes, multiclass):
 
     fig, ax = plt.subplots(figsize=(7, 2.8))
     for i, line in enumerate(pdp_values[classes]):
-        label = f"Clase {clf.classes_[classes[i]]}" if multiclass else clf.classes_[1]
+        label = f"Clase {clf.classes_[classes[i]]}" if multiclass else f"Clase {clf.classes_[1]}"
         ax.plot(feature_values, line, label=label)
     fig.legend(loc='center left', bbox_to_anchor=(1, .75))
 

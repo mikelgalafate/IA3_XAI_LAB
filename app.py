@@ -10,7 +10,7 @@ import os
 
 def footer(file_path):
     st.markdown("---")
-    imagenes = st.columns(5)
+    imagenes = st.columns([4,5,5,6,3])
     path = os.path.join(file_path, "img", "footer")
     for img_col, img_path in zip(imagenes, os.listdir(path)):
         img_col.image(os.path.join(path, img_path))
@@ -137,8 +137,6 @@ with datos:
             desc = df.describe(include="all")
             st.dataframe(desc, use_container_width=True)
 
-
-
         #################################################################
         ################# ANÁLISIS UNIVARIANTE ##########################
         #################################################################
@@ -180,8 +178,6 @@ with datos:
             fig = fig_univar_hist_box(x, col, bins=bins_opt)
             st.pyplot(fig, clear_figure=True)
 
-
-
         #################################################################
         ################# ANÁLISIS BIVARIANTE ###########################
         #################################################################
@@ -219,7 +215,6 @@ with datos:
             with col_center:
                 st.pyplot(fig, clear_figure=True)
 
-
         #################################################################
         ################# MATRIZ CORRELACIÓN ############################
         #################################################################
@@ -254,7 +249,7 @@ with datos:
 
     finally:
         footer(file_path)
-        
+
 #############################################
 ######## CLASIFICACIÓN ######################
 #############################################
@@ -280,8 +275,7 @@ if problem_type == "Clasificacion":
             # FORM: Configuración + Entrenamiento
             # =========================
 
-            st.markdown("**Variable de etiquetas**")
-
+            st.subheader("Análisis sobre variable objetivo")
             df_sample = df.copy()
 
             target_select, target_histogram = st.columns([1, 2])
@@ -306,7 +300,7 @@ if problem_type == "Clasificacion":
                 st.pyplot(fig, clear_figure=True)
 
             # Partición train-test
-            st.markdown("**Partición Train-Test**")
+            st.subheader("Preparación del modelo")
             train_data_col, test_data_col, test_size_select = st.columns(3)
 
             with test_size_select:
@@ -328,7 +322,7 @@ if problem_type == "Clasificacion":
 
             if is_multiclass(y_train) is None:
                 st.error("No hay datos suficientes de cada clase para entrenar")
-                train_clicked = st.form_submit_button("🚀 Entrenar modelo", type="primary", disabled=True)
+                train_clicked = st.form_submit_button("Entrenar modelo", type="primary", disabled=True)
                 st.stop()
 
             if len(pd.Series(y_train).unique()) != len(pd.Series(y).unique()):
@@ -342,14 +336,14 @@ if problem_type == "Clasificacion":
 
             if multiclass is None:
                 st.error("No hay suficientes clases")
-                train_clicked = st.form_submit_button("🚀 Entrenar modelo", type="primary", disabled=True)
+                train_clicked = st.form_submit_button("Entrenar modelo", type="primary", disabled=True)
                 st.stop()
 
             elif multiclass:
-                model_type_select, estimator_select = st.columns([2, 1])
+                estimator_select, model_type_select = st.columns([2, 1])
 
                 with model_type_select:
-                    model_type = st.selectbox("Método", get_model_list(multiclass), index=0, key="model")
+                    model_type = st.selectbox("Estrategia", get_model_list(multiclass), index=0, key="model")
 
                 # Solo mostrar estimador si es OVO/OVR
                 if model_type in ("OneVsOne", "OneVsRest"):
@@ -359,12 +353,13 @@ if problem_type == "Clasificacion":
                 model_type = st.selectbox("Modelo", get_model_list(multiclass), index=0, key="model")
 
             # Parametrización del modelo (UI dinámica)
-            params = render_hyperparams_ui(model_type, key_prefix="hp_bin" if not multiclass else "hp_multi")
+            params = render_hyperparams_ui(model_type if not multiclass else estimator,
+                                           key_prefix="hp_bin" if not multiclass else "hp_multi")
 
             # =========================
             # Entrenamiento (solo cuando se pulsa el submit)
             # =========================
-            if st.button("🚀 Entrenar modelo", type="primary"):
+            if st.button("Entrenar modelo", type="primary"):
                 with st.spinner("Entrenando modelo..."):
                     clf = create_classifier(
                         multiclass=multiclass,
@@ -405,7 +400,7 @@ if problem_type == "Clasificacion":
             # Resultados + XAI (se muestran si ya hay entrenamiento guardado)
             # =========================
             if not st.session_state.trained:
-                st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
+                st.info("Configura el modelo y pulsa **Entrenar modelo** para ver resultados y explicabilidad.")
                 footer(file_path)
                 st.stop()
 
@@ -452,7 +447,7 @@ if problem_type == "Clasificacion":
                 with selector:
                     instance = st.number_input(label="Instance",
                                                min_value=0,
-                                               max_value=len(X_test)-1,
+                                               max_value=len(X_test) - 1,
                                                key="instance_select",
                                                disabled=random)
                 fig = lime_plot(clf, X_train, X_test, features=features, instance=instance)
@@ -495,7 +490,8 @@ if problem_type == "Clasificacion":
                 if st.session_state.shap_values is None:
                     st.info("El cálculo de los valores SHAP puede llevar mucho rato si el conjunto es muy grande.")
 
-                if st.button("Calcular valores SHAP" if st.session_state.shap_values is None else "Recalcular valores SHAP"):
+                if st.button(
+                        "Calcular valores SHAP" if st.session_state.shap_values is None else "Recalcular valores SHAP"):
                     with st.spinner("Calculando valores SHAP. Si el conjunto es muy grande, podría llevar un rato..."):
                         st.session_state.shap_values = shapley_values(clf, X_train, X_test)
                 if st.session_state.shap_values is not None:
@@ -544,7 +540,6 @@ if problem_type == "Clasificacion":
                         _, plot, _ = st.columns([1, 6, 1])
                         with plot:
                             st.pyplot(fig, clear_figure=True)
-
 
             # --- EXPLICABILIDAD GLOBAL ---
             with st.expander("IMPORTANCIA DE VARIABLES", expanded=False):
@@ -656,7 +651,7 @@ elif problem_type == "Regresion":
             # =========================
             # FORM: Configuración + Entrenamiento
             # =========================
-            st.markdown("**Variable de etiquetas**")
+            st.subheader("Análisis sobre variable objetivo")
 
             df_sample = df.copy()
 
@@ -680,7 +675,7 @@ elif problem_type == "Regresion":
                 st.pyplot(fig, clear_figure=True)
 
             # Partición train-test
-            st.markdown("**Partición Train-Test**")
+            st.subheader("Preparación del modelo")
             train_data_col, test_data_col, test_size_select = st.columns(3)
 
             with test_size_select:
@@ -727,7 +722,7 @@ elif problem_type == "Regresion":
             # =========================
             # Entrenamiento (solo cuando se pulsa el submit)
             # =========================
-            if st.button("🚀 Entrenar modelo", type="primary"):
+            if st.button("Entrenar modelo", type="primary"):
                 with st.spinner("Entrenando modelo..."):
                     clf = create_regressor(model_name=model_type, params=params)
                     clf.fit(X_train, y_train)
@@ -756,7 +751,7 @@ elif problem_type == "Regresion":
                 st.success("Entrenamiento finalizado ✅")
 
             if not st.session_state.trained:
-                st.info("Configura el modelo y pulsa **🚀 Entrenar modelo** para ver resultados y explicabilidad.")
+                st.info("Configura el modelo y pulsa **Entrenar modelo** para ver resultados y explicabilidad.")
                 st.stop()
 
             clf = st.session_state.clf
