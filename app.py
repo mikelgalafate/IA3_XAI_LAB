@@ -10,7 +10,7 @@ import os
 
 def footer(file_path):
     st.markdown("---")
-    imagenes = st.columns([4,5,5,6,3])
+    imagenes = st.columns([3,4,5,5,6,3])
     path = os.path.join(file_path, "img", "footer")
     for img_col, img_path in zip(imagenes, os.listdir(path)):
         img_col.image(os.path.join(path, img_path))
@@ -33,11 +33,11 @@ icon_path = os.path.join(file_path, "img", "icon.jpeg")
 
 st.set_page_config(page_title="IA3 XAI LAB", page_icon=f"{file_path}/img/icon.jpeg", layout="wide")
 
-col1, col2 = st.columns([1, 8], vertical_alignment="center")
+col1, col2 = st.columns([1, 10], vertical_alignment="bottom")
 with col1:
-    st.image(f"{file_path}/img/icon.jpeg", width=70)
+    st.image(f"{file_path}/img/icon.jpeg", width=100)
 with col2:
-    st.title("IA3 XAI LAB")
+    st.title("IA3 XAI LAB",)
 
 #################################################################
 ################# CARGA DE DATOS ################################
