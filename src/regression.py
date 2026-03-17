@@ -22,7 +22,8 @@ def create_regressor(model_name, params=None):
         return DecisionTreeRegressor(**params)
     elif model_name == "MLP Regressor":
         return MLPRegressor(**params)
-    return LinearRegression()
+    else:
+        raise Exception
 
 
 REGRESSION_PARAM_SPECS = {

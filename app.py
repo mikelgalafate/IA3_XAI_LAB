@@ -467,16 +467,16 @@ if problem_type == "Clasificacion":
                 if multiclass:
                     seleccion = st.segmented_control("Clase objetivo", clf.classes_, selection_mode="multi")
                     if len(seleccion) == 0:
-                        classes = None
+                        class_select = None
                     else:
-                        classes = [list(clf.classes_).index(op) for op in seleccion]
-                        classes.sort()
+                        class_select = [list(clf.classes_).index(op) for op in seleccion]
+                        class_select.sort()
                 else:
-                    classes = [0]
+                    class_select = [0]
 
-                if feature_idx is not None and classes is not None:
+                if feature_idx is not None and class_select is not None:
                     try:
-                        fig = pdp_plot(clf, X_train, feature_idx, classes, multiclass)
+                        fig = pdp_plot(clf, X_train, feature_idx, class_select, multiclass)
                     except Exception as e:
                         st.exception(e)
 
@@ -496,7 +496,7 @@ if problem_type == "Clasificacion":
                         st.session_state.shap_values = shapley_values(clf, X_train, X_test)
                 if st.session_state.shap_values is not None:
                     st.subheader("Shapley Importance")
-                    fig = shapley_importance(st.session_state.shap_values, classes=classes, features=features)
+                    fig = shapley_importance(st.session_state.shap_values, classes=clf.classes_, features=features)
 
                     _, plot, _ = st.columns([1, 6, 1])
                     with plot:
@@ -724,7 +724,11 @@ elif problem_type == "Regresion":
             # =========================
             if st.button("Entrenar modelo", type="primary"):
                 with st.spinner("Entrenando modelo..."):
-                    clf = create_regressor(model_name=model_type, params=params)
+                    try:
+                        clf = create_regressor(model_name=model_type, params=params)
+                    except Exception as e:
+                        st.exception(e)
+                        st.stop()
                     clf.fit(X_train, y_train)
                     pred = clf.predict(X_test)
 

@@ -130,6 +130,7 @@ MODEL_PARAM_SPECS = {
     },
 }
 
+
 def get_param_specs(model_name: str):
     return MODEL_PARAM_SPECS.get(model_name, {})
 
@@ -149,19 +150,17 @@ def create_classifier(multiclass, ovo=True, estimator="SVM", classifier="Linear 
     - params: dict con hiperparámetros del modelo (se aplican al estimador correspondiente)
     """
     params = params or {}
+    print(classifier, estimator)
 
     if multiclass:
         # Estimador base para OVO/OVR
-        if estimator == "SVM":
-            base_estimator = SVC(**params)
-        elif estimator == "RandomForest":
-            base_estimator = RandomForestClassifier(**params)
-        else:
-            # fallback razonable
+        try:
             base_estimator = create_classifier(multiclass=False,
+                                               estimator=None,
                                                classifier=estimator,
-                                               **params)
-
+                                               params=params)
+        except Exception as e:
+            st.exception(e)
         # Wrapper multiclass
         if ovo:
             clf = OneVsOneClassifier(base_estimator)
@@ -171,40 +170,31 @@ def create_classifier(multiclass, ovo=True, estimator="SVM", classifier="Linear 
     else:
         # Modelos binarios
         if classifier == "Linear SVM":
-            # params típicos: C
             clf = SVC(kernel="linear", probability=True, **params)
 
         elif classifier == "RBF SVM":
-            # params típicos: C, gamma
             clf = SVC(kernel="rbf", **params)
 
         elif classifier == "Nearest Neighbors":
-            # params típicos: n_neighbors, weights
             clf = KNeighborsClassifier(**params)
 
         elif classifier == "Decision Tree":
-            # params típicos: max_depth, criterion, min_samples_split...
             clf = DecisionTreeClassifier(**params)
 
         elif classifier == "Random Forest":
-            # params típicos: n_estimators, max_depth, max_features...
             clf = RandomForestClassifier(**params)
 
         elif classifier == "MLP":
-            # params típicos: hidden_layer_sizes, alpha, max_iter...
             clf = MLPClassifier(**params)
 
         elif classifier == "AdaBoost":
-            # params típicos: n_estimators, learning_rate...
             clf = AdaBoostClassifier(**params)
 
         elif classifier == "Naive Bayes":
-            # params típicos: var_smoothing
             clf = GaussianNB(**params)
 
         else:
-            # fallback (por si llega un nombre inesperado)
-            clf = SVC(kernel="linear", **params)
+            raise Exception
 
     return clf
 
@@ -248,6 +238,7 @@ def render_hyperparams_ui(model_name: str, key_prefix: str = "hp") -> dict:
             st.warning(f"Tipo de hiperparámetro no soportado: {meta['type']}")
 
     return params
+
 
 def _unwrap_estimator(clf):
     """
