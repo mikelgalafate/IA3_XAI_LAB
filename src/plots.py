@@ -183,31 +183,27 @@ def pdp_plot(clf, x, feature_idx, classes, multiclass):
 def lime_plot(clf, x_train, x_test, features, instance=None):
     explainer = LimeTabularExplainer(x_train, feature_names=features, class_names=clf.classes_,
                                      discretize_continuous=False)
-    # Explicar la predicción de la clase en una muestra de X_test
-    # Elegimos una instancia aleatoria del conjunto de test
     if instance is None:
         instance = np.random.randint(0, x_test.shape[0])
-    sample = np.array(x_test)[instance]  # Reshape para la instancia individual
-    if hasattr(clf, "predict_proba"):
-        predict_func = clf.predict_proba
-    else:
-        predict_func = clf.decision_function
+
+    sample = x_test.iloc[instance].values  # 1D numpy para LIME (ok)
+
+    def predict_fn(x_np):
+        x_df = pd.DataFrame(x_np, columns=list(features))  # <- recupera nombres
+        if hasattr(clf, "predict_proba"):
+            return clf.predict_proba(x_df)
+        return clf.decision_function(x_df)
 
     # Explicación de LIME para la
-    explanation = explainer.explain_instance(sample, predict_func, num_features=len(features),
+    explanation = explainer.explain_instance(sample, predict_fn, num_features=len(features),
                                              top_labels=1)
 
-    # Extraer las explicaciones de las características ordenadas de mayor a menor
     feature_importance = explanation.as_list(explanation.top_labels[0])[::-1]
+    feats, importances = zip(*feature_importance)
 
-    # Graficar las características más importantes de la clase específica
-    features, importances = zip(*feature_importance)
-    # Crear una figura para el gráfico
     fig, ax = plt.subplots(figsize=(7, 2.8))
     plt.xticks(rotation=45)
-    ax.barh(features, np.array(importances), label=f'Clase {clf.classes_[explanation.top_labels[0]]}')
-
-    # Personalizar gráfico
+    ax.barh(feats, np.array(importances), label=f'Clase {clf.classes_[explanation.top_labels[0]]}')
     ax.set_ylabel('Características')
     ax.set_xlabel('Valor LIME')
     ax.set_title(f"Explicaciones LIME instancia {instance}")
@@ -326,27 +322,30 @@ def fig_regression_results(y_true, y_pred):
 
 
 def lime_plot_reg(model, X_train, X_test, features, instance=None):
-    fig, ax = plt.subplots(figsize=(7, 2.8))
-    explainer = LimeTabularExplainer(X_train.values, mode="regression", feature_names=features,
-                                     discretize_continuous=False,
-                                     random_state=42)
+    explainer = LimeTabularExplainer(
+        X_train.values,
+        mode="regression",
+        feature_names=list(features),
+        discretize_continuous=False,
+        random_state=42
+    )
 
-    # Explicar la predicción de la clase en una muestra de X_test
-    # Elegimos una instancia aleatoria del conjunto de test
     if instance is None:
         instance = np.random.randint(0, X_test.shape[0])
-    sample = np.array(X_test)[instance]
 
-    # Explicación de LIME para la
-    explanation = explainer.explain_instance(sample, model.predict, num_features=len(features))
+    sample = X_test.iloc[instance].values
 
-    # Extraer las explicaciones de las características ordenadas de mayor a menor
+    def predict_fn(x_np):
+        x_df = pd.DataFrame(x_np, columns=list(features))
+        return model.predict(x_df)
+
+    explanation = explainer.explain_instance(sample, predict_fn, num_features=len(features))
+
     feature_importance = explanation.as_list()[::-1]
+    feats, importances = zip(*feature_importance)
 
-    # Graficar las características más importantes de la clase específica
-    features, importances = zip(*feature_importance)
-    ax.barh(features, np.array(importances))
-
+    fig, ax = plt.subplots(figsize=(7, 2.8))
+    ax.barh(feats, np.array(importances))
     ax.set_ylabel('Características')
     ax.set_xlabel('Valor LIME')
     ax.set_title(f"Explicaciones LIME instancia {instance}")
